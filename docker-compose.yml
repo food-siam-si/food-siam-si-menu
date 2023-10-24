@@ -1,0 +1,13 @@
+version: "3.1"
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${DB_USER}
+      POSTGRES_USER: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - ${DB_PORT}:5432
+    volumes:
+      - ./dbdata:/var/lib/postgresql/data

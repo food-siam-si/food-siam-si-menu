@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "./proto";
+
+
+message RestaurantType {
+  uint32 id = 1;
+  string name = 2;
+}
+
+message GetRestaurantTypeResponse {
+  repeated RestaurantType restaurantTypes = 1;
+}
+
+service RestaurantTypeService {
+  rpc GetAll (google.protobuf.Empty) returns (GetRestaurantTypeResponse) {}
+}

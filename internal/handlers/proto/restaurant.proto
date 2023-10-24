@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+option go_package = "./proto";
+
+import "internal/handlers/proto/user.proto";
+import "internal/handlers/proto/restaurant_type.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+message Restaurant {
+  uint32 id = 1;
+  uint32 userId = 2;
+  string name = 3;
+  string description = 4;
+  float locationLat = 5;
+  float locationLong = 6;
+  string phoneNumber = 7;
+  AveragePrice averagePrice = 8;
+  string imageUrl = 9;
+  bool isInService = 10;
+  repeated RestaurantType  restaurantType  = 11;
+}
+
+enum AveragePrice {
+  LowerThanHundreds = 0;
+  HundredToTwoHundred = 1;
+  TwoHundredToFiveHundred = 2;
+  MoreThanFiveHundred = 3;
+  MoreThanOneThousand = 4;
+}
+
+service RestaurantService {
+  rpc VerifyIdentity (VerifyRestaurantIdentityRequest) returns (google.protobuf.BoolValue) {}
+  rpc Create(CreateRestaurantRequest) returns (google.protobuf.Empty) {}
+  rpc FindById (google.protobuf.UInt32Value) returns (Restaurant) {}
+  rpc Random (RandomRestaurantRequest) returns (Restaurant) {}
+  rpc UpdateCurrent (UpdateCurrentRestaurantRequest) returns (google.protobuf.Empty) {}
+  rpc GetCurrent (GetCurrentRestaurantRequest) returns (Restaurant) {}
+}
+
+message VerifyRestaurantIdentityRequest {
+  uint32 id = 1;
+  User user = 2;
+}
+
+message CreateRestaurantRequest {
+  string name = 1;
+  string description = 2;
+  float locationLat = 3;
+  float locationLong = 4;
+  string phoneNumber = 5;
+  AveragePrice averagePrice = 6;
+  string imageUrl = 7;
+  repeated uint32 restaurantTypeIds = 8;
+  User user = 9;
+}
+
+message UpdateCurrentRestaurantRequest {
+  string name = 1;
+  string description = 2;
+  float locationLat = 3;
+  float locationLong = 4;
+  string phoneNumber = 5;
+  AveragePrice averagePrice = 6;
+  string imageUrl = 7;
+  bool isInService = 8;
+  repeated uint32 restaurantTypeIds = 9;
+  User user = 10;
+}
+
+message GetCurrentRestaurantRequest {
+  User user = 1;
+}
+
+message RandomRestaurantRequest {
+  repeated uint32 restaurantTypeIds = 1;
+  float currentLat = 2;
+  float currentLong = 3;
+  uint32 maxDistanceKm = 4;
+}
