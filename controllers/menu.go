@@ -292,3 +292,50 @@ func ViewRecommendMenu(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"menus": menus})
 }
+
+type UpdateRecommendMenuInput struct {
+	UserId  uint `json:"user_id" binding:"required"`
+	MenuId  uint `json:"menu_id" binding:"required"`
+	IsRecom bool `json:"is_recom"`
+}
+
+func UpdateRecommendMenu(c *gin.Context) {
+	RestId := c.Param("id")
+
+	id, err := strToInt(RestId)
+
+	var input UpdateRecommendMenuInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	res, err := resturant.RestaurantClient.VerifyIdentity(c, &proto.VerifyRestaurantIdentityRequest{
+		Id: uint32(id),
+		User: &proto.User{
+			Id: uint32(input.UserId),
+		},
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if res.Value == false {
+		c.JSON(http.StatusForbidden, gin.H{"error": "no permission"})
+		return
+	}
+
+	m := models.Menu{}
+	m.Id = input.MenuId
+
+	err = models.DB.Model(&m).Update("is_recom", input.IsRecom).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Mark Recommend Menu Complete"})
+}

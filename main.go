@@ -25,6 +25,7 @@ func main() {
 	menuGroup.DELETE("/:id", controllers.DeleteMenu)
 	menuGroup.GET("/:id/random", controllers.RandomMenu)
 	menuGroup.GET("/:id/recommend", controllers.ViewRecommendMenu)
+	menuGroup.PUT("/:id/recommend", controllers.UpdateRecommendMenu)
 
 	r.Run(":" + os.Getenv("HOST_PORT"))
 
