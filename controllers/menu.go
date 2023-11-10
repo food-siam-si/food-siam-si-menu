@@ -34,7 +34,7 @@ func ViewMenu(c *gin.Context) {
 	menus, err := models.GetMenusByResturantId(uint(id))
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -203,12 +203,12 @@ func UpdateMenu(c *gin.Context) {
 	}
 
 	if err = models.DB.Where("menu_id = ?", input.MenuId).Delete(models.MenuAddons{}).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
 	if err = models.DB.Create(&addons).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -240,7 +240,7 @@ func DeleteMenu(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -287,7 +287,7 @@ func RandomMenu(c *gin.Context) {
 	id, err := strToInt(RestId)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Received id is not int": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
 		return
 	}
 
@@ -309,7 +309,7 @@ func ViewRecommendMenu(c *gin.Context) {
 	id, err := strToInt(RestId)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Received id is not int": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
 		return
 	}
 
@@ -368,4 +368,37 @@ func UpdateRecommendMenu(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Mark Recommend Menu Complete"})
+}
+
+func GetTypes(c *gin.Context) {
+
+	types, err := models.GetAllTypes()
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"types": types})
+}
+
+func GetTypesByResturant(c *gin.Context) {
+
+	RestId := c.Param("id")
+
+	id, err := strToInt(RestId)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
+		return
+	}
+
+	types, err := models.GetTypesByResturant(id)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"types": types})
 }

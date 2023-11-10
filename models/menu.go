@@ -96,3 +96,35 @@ func GetRecommendMenusByResturantId(RestId uint) ([]Menu, error) {
 
 	return menus, nil
 }
+
+func GetAllTypes() ([]MenuType, error) {
+
+	var types []MenuType
+
+	err := DB.Order("id").Model(&types).Find(&types).Error
+
+	if err != nil {
+		// println(err.Error())
+		return types, err
+	}
+
+	return types, nil
+}
+
+func GetTypesByResturant(RestId uint) ([]MenuType, error) {
+
+	var types []MenuType
+	var m []Menu
+
+	if err := DB.Preload("Addons").Preload("Types").Where("rest_id = ?", RestId).Find(&m).Error; err != nil {
+		return nil, errors.New("Menu not found!")
+	}
+
+	err := DB.Order("id").Distinct().Model(&m).Association("Types").Find(&types)
+
+	if err != nil {
+		return types, err
+	}
+
+	return types, nil
+}
