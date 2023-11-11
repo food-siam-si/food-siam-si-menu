@@ -115,9 +115,11 @@ func AddMenu(c *gin.Context) {
 		})
 	}
 
-	if err := models.DB.Create(&addons).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
-		return
+	if len(addons) != 0 {
+		if err := models.DB.Create(&addons).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Add Menu Complete"})
@@ -209,9 +211,11 @@ func UpdateMenu(c *gin.Context) {
 		return
 	}
 
-	if err = models.DB.Create(&addons).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
-		return
+	if len(addons) != 0 {
+		if err = models.DB.Create(&addons).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Update Menu Complete"})
