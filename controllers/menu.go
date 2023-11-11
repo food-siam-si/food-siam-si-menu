@@ -3,8 +3,6 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	resturant "food-siam-si/food-siam-si-menu/internal"
-	"food-siam-si/food-siam-si-menu/internal/handlers/proto"
 	"food-siam-si/food-siam-si-menu/models"
 	"math/rand"
 	"net/http"
@@ -60,26 +58,14 @@ func AddMenu(c *gin.Context) {
 
 	id, err := strToInt(RestId)
 
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
+		return
+	}
+
 	var input AddMenuInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	res, err := resturant.RestaurantClient.VerifyIdentity(c, &proto.VerifyRestaurantIdentityRequest{
-		Id: uint32(id),
-		User: &proto.User{
-			Id: uint32(input.UserId),
-		},
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
-		return
-	}
-
-	if res.Value == false {
-		c.JSON(http.StatusForbidden, gin.H{"error": "no permission"})
 		return
 	}
 
@@ -135,26 +121,14 @@ func UpdateMenu(c *gin.Context) {
 
 	id, err := strToInt(RestId)
 
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
+		return
+	}
+
 	var input UpdateMenuInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	res, err := resturant.RestaurantClient.VerifyIdentity(c, &proto.VerifyRestaurantIdentityRequest{
-		Id: uint32(id),
-		User: &proto.User{
-			Id: uint32(input.UserId),
-		},
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
-		return
-	}
-
-	if res.Value == false {
-		c.JSON(http.StatusForbidden, gin.H{"error": "no permission"})
 		return
 	}
 
@@ -227,31 +201,9 @@ type DeleteMenuInput struct {
 }
 
 func DeleteMenu(c *gin.Context) {
-
-	RestId := c.Param("id")
-
-	id, err := strToInt(RestId)
-
 	var input DeleteMenuInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	res, err := resturant.RestaurantClient.VerifyIdentity(c, &proto.VerifyRestaurantIdentityRequest{
-		Id: uint32(id),
-		User: &proto.User{
-			Id: uint32(input.UserId),
-		},
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
-		return
-	}
-
-	if res.Value == false {
-		c.JSON(http.StatusForbidden, gin.H{"error": "no permission"})
 		return
 	}
 
@@ -330,7 +282,6 @@ func RandomMenu(c *gin.Context) {
 
 	randomIndex := rand.Intn(len(newMenuList))
 	c.JSON(http.StatusOK, gin.H{"menus": newMenuList[randomIndex]})
-	return
 }
 
 func ViewRecommendMenu(c *gin.Context) {
@@ -360,37 +311,16 @@ type UpdateRecommendMenuInput struct {
 }
 
 func UpdateRecommendMenu(c *gin.Context) {
-	RestId := c.Param("id")
-
-	id, err := strToInt(RestId)
-
 	var input UpdateRecommendMenuInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	res, err := resturant.RestaurantClient.VerifyIdentity(c, &proto.VerifyRestaurantIdentityRequest{
-		Id: uint32(id),
-		User: &proto.User{
-			Id: uint32(input.UserId),
-		},
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
-		return
-	}
-
-	if res.Value == false {
-		c.JSON(http.StatusForbidden, gin.H{"error": "no permission"})
-		return
-	}
-
 	m := models.Menu{}
 	m.Id = input.MenuId
 
-	err = models.DB.Model(&m).Update("is_recom", input.IsRecom).Error
+	err := models.DB.Model(&m).Update("is_recom", input.IsRecom).Error
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
