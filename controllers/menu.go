@@ -158,7 +158,7 @@ func UpdateMenu(c *gin.Context) {
 
 	m, err := models.GetMenuByID(input.MenuId)
 
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Menu not found"})
 		return
 	}
@@ -253,7 +253,7 @@ func DeleteMenu(c *gin.Context) {
 
 	m, err := models.GetMenuByID(input.MenuId)
 
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Menu not found"})
 		return
 	}
