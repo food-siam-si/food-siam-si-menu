@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	resturant "food-siam-si/food-siam-si-menu/internal"
 	"food-siam-si/food-siam-si-menu/internal/handlers/proto"
 	"food-siam-si/food-siam-si-menu/models"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 )
 
@@ -291,6 +293,8 @@ func RandomMenu(c *gin.Context) {
 		return
 	}
 
+	types, noType := c.GetQueryArray("types")
+
 	menus, err := models.GetMenusByResturantId(uint(id))
 
 	if err != nil {
@@ -298,9 +302,31 @@ func RandomMenu(c *gin.Context) {
 		return
 	}
 
-	randomIndex := rand.Intn(len(menus))
+	if !noType {
+		randomIndex := rand.Intn(len(menus))
+		c.JSON(http.StatusOK, gin.H{"menus": menus[randomIndex]})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{"menus": menus[randomIndex]})
+	newMenuList := []models.Menu{}
+
+	for _, menu := range menus {
+		for _, t := range menu.Types {
+			if slices.Contains(types, fmt.Sprint(t.Id)) {
+				newMenuList = append(newMenuList, menu)
+				break
+			}
+		}
+	}
+
+	if (len(newMenuList)) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No menu found"})
+		return
+	}
+
+	randomIndex := rand.Intn(len(newMenuList))
+	c.JSON(http.StatusOK, gin.H{"menus": newMenuList[randomIndex]})
+	return
 }
 
 func ViewRecommendMenu(c *gin.Context) {

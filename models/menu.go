@@ -30,8 +30,8 @@ type MenuAddons struct {
 }
 
 type MenuType struct {
-	Id   uint32 `gorm:"primaryKey;autoIncrement"`
-	Name string `gorm:"not null"`
+	Id   uint32 `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name string `gorm:"not null" json:"name"`
 }
 
 func GetMenuByID(uid uint) (Menu, error) {
