@@ -21,11 +21,17 @@ type Menu struct {
 	ImageUrl    string       `gorm:"size:255;" json:"image_url"`
 	RestId      uint         `gorm:"not null;" json:"rest_id"`
 	Addons      []MenuAddons `gorm:"foreignKey:MenuId;references:Id" json:"addons"`
+	Types       []MenuType   `gorm:"many2many:menu_menu_type" json:"types"`
 }
 
 type MenuAddons struct {
 	MenuId uint   `gorm:"not null;" json:"menu_id"`
 	Addons string `gorm:"size:255;not null;" json:"addons"`
+}
+
+type MenuType struct {
+	Id   uint32 `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name string `gorm:"not null" json:"name"`
 }
 
 func GetMenuByID(uid uint) (Menu, error) {
@@ -44,7 +50,7 @@ func GetMenusByResturantId(RestId uint) ([]Menu, error) {
 
 	var m []Menu
 
-	if err := DB.Preload("Addons").Where("rest_id = ?", RestId).Find(&m).Error; err != nil {
+	if err := DB.Preload("Addons").Preload("Types").Where("rest_id = ?", RestId).Find(&m).Error; err != nil {
 		return m, errors.New("Menu not found!")
 	}
 
@@ -65,10 +71,14 @@ func (m *Menu) AddMenu() (*Menu, error) {
 
 func (m *Menu) UpdateMenu() (*Menu, error) {
 
+	if err := DB.Model(&m).Association("Types").Replace(m.Types); err != nil {
+		return nil, err
+	}
+
 	err := DB.Save(&m).Error
 
 	if err != nil {
-		return &Menu{}, err
+		return nil, err
 	}
 
 	return m, nil
@@ -85,4 +95,36 @@ func GetRecommendMenusByResturantId(RestId uint) ([]Menu, error) {
 	}
 
 	return menus, nil
+}
+
+func GetAllTypes() ([]MenuType, error) {
+
+	var types []MenuType
+
+	err := DB.Order("id").Model(&types).Find(&types).Error
+
+	if err != nil {
+		// println(err.Error())
+		return types, err
+	}
+
+	return types, nil
+}
+
+func GetTypesByResturant(RestId uint) ([]MenuType, error) {
+
+	var types []MenuType
+	var m []Menu
+
+	if err := DB.Preload("Addons").Preload("Types").Where("rest_id = ?", RestId).Find(&m).Error; err != nil {
+		return nil, errors.New("Menu not found!")
+	}
+
+	err := DB.Order("id").Distinct().Model(&m).Association("Types").Find(&types)
+
+	if err != nil {
+		return types, err
+	}
+
+	return types, nil
 }

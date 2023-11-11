@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"errors"
+	"fmt"
 	resturant "food-siam-si/food-siam-si-menu/internal"
 	"food-siam-si/food-siam-si-menu/internal/handlers/proto"
 	"food-siam-si/food-siam-si-menu/models"
@@ -9,6 +11,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/exp/slices"
+	"gorm.io/gorm"
 )
 
 func strToInt(str string) (uint, error) {
@@ -25,28 +29,14 @@ func ViewMenu(c *gin.Context) {
 	id, err := strToInt(RestId)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Received id is not int": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
 		return
 	}
-
-	// res, err := resturant.RestaurantClient.VerifyIdentity(c, &proto.VerifyRestaurantIdentityRequest{
-	// 	Id: uint32(id),
-	// })
-
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	// 	return
-	// }
-
-	// if res.Value == false {
-	// 	c.JSON(http.StatusNotFound, gin.H{"error": "restaurant not found"})
-	// 	return
-	// }
 
 	menus, err := models.GetMenusByResturantId(uint(id))
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -62,6 +52,7 @@ type AddMenuInput struct {
 	IsRecom     bool     `json:"is_recom"`
 	ImageUrl    string   `json:"image_url"`
 	Addons      []string `json:"addons"`
+	Types       []uint32 `json:"typesId"`
 }
 
 func AddMenu(c *gin.Context) {
@@ -83,7 +74,7 @@ func AddMenu(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -100,7 +91,21 @@ func AddMenu(c *gin.Context) {
 	m.IsRecom = input.IsRecom
 	m.ImageUrl = input.ImageUrl
 
+	var types []models.MenuType
+	for _, t := range input.Types {
+		types = append(types, models.MenuType{
+			Id: t,
+		})
+	}
+
+	m.Types = types
+
 	_, err = m.AddMenu()
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+		return
+	}
 
 	var addons []models.MenuAddons
 	for _, addon := range input.Addons {
@@ -109,10 +114,9 @@ func AddMenu(c *gin.Context) {
 			Addons: addon,
 		})
 	}
-	models.DB.Create(&addons)
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := models.DB.Create(&addons).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -143,7 +147,7 @@ func UpdateMenu(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -154,8 +158,13 @@ func UpdateMenu(c *gin.Context) {
 
 	m, err := models.GetMenuByID(input.MenuId)
 
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Menu not found"})
+		return
+	}
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -171,6 +180,15 @@ func UpdateMenu(c *gin.Context) {
 	m.IsRecom = input.IsRecom
 	m.ImageUrl = input.ImageUrl
 
+	var types []models.MenuType
+	for _, t := range input.Types {
+		types = append(types, models.MenuType{
+			Id: t,
+		})
+	}
+
+	m.Types = types
+
 	_, err = m.UpdateMenu()
 
 	var addons []models.MenuAddons
@@ -182,17 +200,17 @@ func UpdateMenu(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
 	if err = models.DB.Where("menu_id = ?", input.MenuId).Delete(models.MenuAddons{}).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
 	if err = models.DB.Create(&addons).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -224,7 +242,7 @@ func DeleteMenu(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -233,18 +251,32 @@ func DeleteMenu(c *gin.Context) {
 		return
 	}
 
-	m := models.Menu{}
-	m.Id = input.MenuId
+	m, err := models.GetMenuByID(input.MenuId)
+
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Menu not found"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+		return
+	}
 
 	if err = models.DB.Where("menu_id = ?", input.MenuId).Delete(models.MenuAddons{}).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+		return
+	}
+
+	if err := models.DB.Model(&m).Association("Types").Replace([]models.MenuAddons{}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
 	err = models.DB.Delete(&m).Error
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -257,20 +289,44 @@ func RandomMenu(c *gin.Context) {
 	id, err := strToInt(RestId)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Received id is not int": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
 		return
 	}
+
+	types, noType := c.GetQueryArray("types")
 
 	menus, err := models.GetMenusByResturantId(uint(id))
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
-	randomIndex := rand.Intn(len(menus))
+	if !noType {
+		randomIndex := rand.Intn(len(menus))
+		c.JSON(http.StatusOK, gin.H{"menus": menus[randomIndex]})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{"menus": menus[randomIndex]})
+	newMenuList := []models.Menu{}
+
+	for _, menu := range menus {
+		for _, t := range menu.Types {
+			if slices.Contains(types, fmt.Sprint(t.Id)) {
+				newMenuList = append(newMenuList, menu)
+				break
+			}
+		}
+	}
+
+	if (len(newMenuList)) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "No menu found"})
+		return
+	}
+
+	randomIndex := rand.Intn(len(newMenuList))
+	c.JSON(http.StatusOK, gin.H{"menus": newMenuList[randomIndex]})
+	return
 }
 
 func ViewRecommendMenu(c *gin.Context) {
@@ -279,14 +335,14 @@ func ViewRecommendMenu(c *gin.Context) {
 	id, err := strToInt(RestId)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Received id is not int": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
 		return
 	}
 
 	menus, err := models.GetRecommendMenusByResturantId(uint(id))
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -318,7 +374,7 @@ func UpdateRecommendMenu(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
@@ -333,9 +389,42 @@ func UpdateRecommendMenu(c *gin.Context) {
 	err = models.DB.Model(&m).Update("is_recom", input.IsRecom).Error
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Mark Recommend Menu Complete"})
+}
+
+func GetTypes(c *gin.Context) {
+
+	types, err := models.GetAllTypes()
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"types": types})
+}
+
+func GetTypesByResturant(c *gin.Context) {
+
+	RestId := c.Param("id")
+
+	id, err := strToInt(RestId)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Received id is not int"})
+		return
+	}
+
+	types, err := models.GetTypesByResturant(id)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Problem Occured"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"types": types})
 }

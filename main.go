@@ -19,6 +19,8 @@ func main() {
 
 	menuGroup := r.Group("/menus")
 
+	menuGroup.GET("/types", controllers.GetTypes)
+	menuGroup.GET("/:id/types", controllers.GetTypesByResturant)
 	menuGroup.GET("/:id", controllers.ViewMenu)
 	menuGroup.POST("/:id", controllers.AddMenu)
 	menuGroup.PUT("/:id", controllers.UpdateMenu)
